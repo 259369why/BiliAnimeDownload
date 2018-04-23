@@ -92,6 +92,14 @@ namespace BiliAnimeDownload.Helpers
                     {
                         //换个API继续读取下载地址
                         flurlClient.Url = Api._playurlApi4(banId, cid,"");
+
+                        var moeheaders = new Dictionary<string, string>();
+                        moeheaders.Add("client", "bili-anime-downloader");
+                        moeheaders.Add("ts", Convert.ToInt64((DateTime.Now - new DateTime(1970, 1, 1, 8, 0, 0, 0)).TotalSeconds).ToString());
+                        moeheaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36");
+                        moeheaders.Add("version", Util.GetVersion());
+                      
+                        flurlClient.WithHeaders(moeheaders);
                         var re2 = await flurlClient.GetStringAsync();
                         JObject obj = JObject.Parse(re2);
                         if (Convert.ToInt32(obj["code"].ToString()) == 0)
@@ -109,7 +117,7 @@ namespace BiliAnimeDownload.Helpers
                         }
                         else
                         {
-                            Util.ShowShortToast("无法读取到下载地址");
+                            Util.ShowShortToast("无法读取到下载地址\r\n"+obj["message"].ToString());
                             return new List<segment_listModel>();
                         }
                     }

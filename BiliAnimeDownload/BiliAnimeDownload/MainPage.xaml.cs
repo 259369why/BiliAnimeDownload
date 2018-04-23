@@ -68,9 +68,9 @@ namespace BiliAnimeDownload
         string _aid = "";
         private async void btn_Go_Clicked(object sender, EventArgs e)
         {
-            if (txt_Sid.Text.Length == 0)
+            if (txt_Sid.Text==null||txt_Sid.Text.Length == 0)
             {
-                Util.ShowShortToast("请输入番剧地址");
+                Util.ShowLongToast("请输入番剧地址");
                 return;
             }
             if (txt_Sid.Text.Contains("av"))

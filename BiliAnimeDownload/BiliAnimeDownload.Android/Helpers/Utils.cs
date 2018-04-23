@@ -23,8 +23,12 @@ namespace BiliAnimeDownload.Droid
         {
             try
             {
-                Intent browserIntent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
-                Android.App.Application.Context.StartActivity(browserIntent);
+                Android.Net.Uri uri = Android.Net.Uri.Parse(url);
+                Intent intent = new Intent(Intent.ActionView, uri);
+                Android.App.Application.Context.StartActivity(intent);
+
+                //Intent browserIntent = new Intent(Intent.ActionView, Android.Net.Uri.Parse(url));
+                //Android.App.Application.Context.StartActivity(browserIntent);
             }
             catch (Exception ex)
             {
