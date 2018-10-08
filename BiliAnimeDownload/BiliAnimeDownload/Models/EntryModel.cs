@@ -38,7 +38,7 @@ namespace BiliAnimeDownload
         public string page { get; set; }
         public long danmaku { get; set; }
         public string cover { get; set; }
-
+        public int orderindex { get; set; }
         public long episode_id { get; set; }
 
         public string index { get; set; }

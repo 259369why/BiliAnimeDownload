@@ -167,7 +167,7 @@ namespace BiliAnime.Helpers
         public static string _playurlApi4(string bangumiId, string cid,string epid)
         {
             //从自建服务器上读取
-            string url = string.Format("http://120.92.50.146/23moe/api/v1/BiliAnimeUrl?animeid={0}&cid={1}&epid={2}", bangumiId, cid, epid);
+            string url = string.Format("https://moe.nsapps.cn/api/v1/BiliAnimeUrl?animeid={0}&cid={1}&epid={2}", bangumiId, cid, epid);
             return url;
         }
 

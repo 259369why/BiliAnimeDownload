@@ -309,6 +309,7 @@ namespace BiliAnimeDownload
                         cover = item.cover,
                         episode_id = long.Parse(item.ep_id),
                         index = item.index,
+                        orderindex=item.orderindex,
                         index_title = item.index_title,
                         page = item.page
                     }
@@ -326,7 +327,7 @@ namespace BiliAnimeDownload
                 if (_downlaodType == DownlaodType.System)
                 {
 
-                    segment_list = await Util.GetVideoUrl(entryModel.ep.danmaku.ToString(), "https://www.bilibili.com/bangumi/play/ep" + entryModel.ep.episode_id, q, _sid, Convert.ToInt32( entryModel.ep.index)-1);
+                    segment_list = await Util.GetVideoUrl(entryModel.ep.danmaku.ToString(), "https://www.bilibili.com/bangumi/play/ep" + entryModel.ep.episode_id, q, _sid, entryModel.ep.orderindex);
                     long _tbyte = 0;
                     long _timelength = 0;
                     foreach (var item1 in segment_list)

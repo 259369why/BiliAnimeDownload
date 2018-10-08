@@ -76,7 +76,7 @@ namespace BiliAnimeDownload.Helpers
 
                     FlvPlyaerUrlModel m = JsonConvert.DeserializeObject<FlvPlyaerUrlModel>(re);
                     // 港澳台的视频会返回一个版权受限的15秒视频，8986943.mp4，出现这个算失败，继续读取
-                    if (m.code == 0&&!re.Contains("8986943"))
+                    if (m.code == 0&&!re.Contains("8986943") && (m.status == 13 && m.vip_status != 0))
                     {
                         foreach (var item in m.durl)
                         {

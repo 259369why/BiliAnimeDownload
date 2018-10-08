@@ -84,6 +84,8 @@ namespace BiliAnimeDownload.Models
     {
         public string format { get; set; }
         public int code { get; set; }
+        public int status { get; set; }
+        public int vip_status { get; set; }
         public List<FlvPlyaerUrlModel> durl { get; set; }
         public int order { get; set; }
         public int length { get; set; }
@@ -114,7 +116,7 @@ namespace BiliAnimeDownload.Models
         public string index_title { get; set; }
         public bool inLocal { get; set; }
         public string index { get; set; }
-        public int orderindex { get; set; }
+        public int orderindex { get; set; } = 0;
         public int episode_status { get; set; }
         //public string episode_id { get; set; }
         public string badge { get; set; }
