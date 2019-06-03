@@ -9,19 +9,20 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xamarin.Forms;
-using Flurl.Http;
 //using Android.App;
 using BiliAnimeDownload.Models;
 using BiliAnimeDownload.Helpers;
 using BiliAnimeDownload.Views;
 using Newtonsoft.Json.Linq;
+using Plugin.Permissions.Abstractions;
+using Plugin.Permissions;
 
 namespace BiliAnimeDownload
 {
     public partial class MainPage : ContentPage
     {
         public event EventHandler<string> GetAnimeInfo;
-       
+
         public MainPage()
         {
             InitializeComponent();
@@ -41,7 +42,7 @@ namespace BiliAnimeDownload
             btn_Go_Clicked(null, null);
         }
 
-        
+
         protected async override void OnAppearing()
         {
             base.OnAppearing();
@@ -58,9 +59,38 @@ namespace BiliAnimeDownload
                 //txt_Sid.Text = "http://m.bilibili.com/bangumi/play/ss4187";
                 Util.CheckUpdate(this, false);
             }
-            _downlaodType =(DownlaodType) SettingHelper.GetDownMode();
+            _downlaodType = (DownlaodType)SettingHelper.GetDownMode();
 
+            await CheckPermission();
         }
+        private async Task<bool> CheckPermission()
+        {
+            try
+            {
+
+                var status = await CrossPermissions.Current.CheckPermissionStatusAsync(Permission.Storage);
+                if (status != PermissionStatus.Granted)
+                {
+                    Util.ShowLongToast("需要运行读写文件权限才能使用！");
+                    if (await CrossPermissions.Current.ShouldShowRequestPermissionRationaleAsync(Permission.Storage))
+                    {
+                        Util.ShowLongToast("需要运行读写文件权限才能使用！");
+                    }
+                    var results = await CrossPermissions.Current.RequestPermissionsAsync(Permission.Storage);
+                    //Best practice to always check that the key exists
+                    if (results.ContainsKey(Permission.Storage))
+                        status = results[Permission.Storage];
+
+                }
+                return status == PermissionStatus.Granted;
+            }
+            catch (Exception ex)
+            {
+                await DisplayAlert("失败", ex.Message, "OK");
+                return false;
+            }
+        }
+
 
         VideoType _videoType = VideoType.Anime;
         DownlaodType _downlaodType = DownlaodType.Bilibili;
@@ -68,14 +98,14 @@ namespace BiliAnimeDownload
         string _aid = "";
         private async void btn_Go_Clicked(object sender, EventArgs e)
         {
-            if (txt_Sid.Text==null||txt_Sid.Text.Length == 0)
+            if (txt_Sid.Text == null || txt_Sid.Text.Length == 0)
             {
                 Util.ShowLongToast("请输入番剧地址");
                 return;
             }
             if (txt_Sid.Text.Contains("av"))
             {
-                _aid = Regex.Match(txt_Sid.Text, @"\d{1,9}", RegexOptions.Singleline).Groups[0].Value;
+                _aid = Regex.Match(txt_Sid.Text, @"av(\d{1,9})", RegexOptions.Singleline | RegexOptions.IgnoreCase).Groups[1].Value;
                 _videoType = VideoType.Video;
                 BindingContext = null;
                 ls.IsVisible = false;
@@ -86,13 +116,13 @@ namespace BiliAnimeDownload
             {
                 if (txt_Sid.Text.Contains("ep"))
                 {
-                    _sid = await Util.BangumiEpidToSid(Regex.Match(txt_Sid.Text, @"\d{1,9}", RegexOptions.Singleline).Groups[0].Value);
+                    _sid = await Util.BangumiEpidToSid(Regex.Match(txt_Sid.Text, @"ep(\d{1,9})", RegexOptions.Singleline | RegexOptions.IgnoreCase).Groups[1].Value);
                 }
                 else
                 {
-                    _sid = Regex.Match(txt_Sid.Text, @"\d{1,9}", RegexOptions.Singleline).Groups[0].Value;
+                    _sid = Regex.Match(txt_Sid.Text, @"(\d{1,9})", RegexOptions.Singleline | RegexOptions.IgnoreCase).Groups[1].Value;
                 }
-                
+
                 _videoType = VideoType.Anime;
                 BindingContext = null;
                 ls.IsVisible = true;
@@ -110,15 +140,8 @@ namespace BiliAnimeDownload
             {
 
                 Loading.IsVisible = true;
-
-                //var str = await Api._BanInfoApi(_sid).GetStringAsync();
-                var eresults = await Api._BanInfoApi2(_sid).GetStringAsync();
-                // str1 = str1.Replace("seasonListCallback(", "");
-                // str1 = str1.Remove(str1.Length-2,2);
-
-
+                var eresults = await HttpHelper.GetStringAsync(Api._BanInfoApi2(_sid));
                 BangumiInfoModel model = JsonConvert.DeserializeObject<BangumiInfoModel>(eresults);
-
                 if (model.code == 0)
                 {
                     BindingContext = model.result;
@@ -127,13 +150,14 @@ namespace BiliAnimeDownload
                     {
                         _videoType = VideoType.AreaAnime;
 
-                        await DisplayAlert("说明", "你下载的是地区专供番,将会调用系统下载", "知道了");
+                        await DisplayAlert("说明", "该番是地区限制番,将会调用系统下载\r\n调用系统下载时清晰度设置无效\r\n请等待系统下载视频完毕后重启哔哩哔哩", "知道了");
                     }
-                    Util.SaveHistroy(new HistroyModel() {
-                         date= DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss"),
-                         id= _sid,
-                         name= model.result.title,
-                         type="anime"
+                    Util.SaveHistroy(new HistroyModel()
+                    {
+                        date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        id = _sid,
+                        name = model.result.title,
+                        type = "anime"
                     });
                 }
                 else
@@ -157,15 +181,8 @@ namespace BiliAnimeDownload
         {
             try
             {
-
                 Loading.IsVisible = true;
-
-                //var str = await Api._BanInfoApi(_sid).GetStringAsync();
-                var eresults = await Api._VideoInfoApi(_aid).GetStringAsync();
-                // str1 = str1.Replace("seasonListCallback(", "");
-                // str1 = str1.Remove(str1.Length-2,2);
-
-
+                var eresults = await HttpHelper.GetStringAsync(Api._VideoInfoApi(_aid));
                 VideoInfoModel model = JsonConvert.DeserializeObject<VideoInfoModel>(eresults);
                 if (model.code == 0)
                 {
@@ -181,15 +198,19 @@ namespace BiliAnimeDownload
                     }
                     Util.SaveHistroy(new HistroyModel()
                     {
-                        date = DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss"),
-                        id = "av"+_aid,
+                        date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        id = "av" + _aid,
                         name = model.data.title,
                         type = "video"
                     });
                 }
+                else if (model.code == -404)
+                {
+                    Util.ShowShortToast($"无法加载此内容，如果是番剧请输入sid或epid");
+                }
                 else
                 {
-                    Util.ShowShortToast("加载失败,请检查网址是否正确");
+                    Util.ShowShortToast($"加载失败,{model.message}");
                 }
             }
             catch (Exception ex)
@@ -204,13 +225,18 @@ namespace BiliAnimeDownload
         }
 
 
-        private void ls_ItemSelected(object sender, SelectedItemChangedEventArgs e)
+        private async void ls_ItemSelected(object sender, SelectedItemChangedEventArgs e)
         {
             if (e.SelectedItem == null)
             {
                 return;
             }
-           
+            if (!await CheckPermission())
+            {
+                Util.ShowLongToast("你没给读写权限啊！！你没给读写权限啊！！你没给读写权限啊！！");
+                return;
+            }
+
             switch (_videoType)
             {
                 case VideoType.Anime:
@@ -229,7 +255,7 @@ namespace BiliAnimeDownload
                     break;
             }
             ((ListView)sender).SelectedItem = null;
-          
+
         }
 
 
@@ -238,7 +264,7 @@ namespace BiliAnimeDownload
             try
             {
                 Loading.IsVisible = true;
-                if (_videoType== VideoType.AreaAnime)
+                if (_videoType == VideoType.AreaAnime)
                 {
                     _downlaodType = DownlaodType.System;
                 }
@@ -294,7 +320,7 @@ namespace BiliAnimeDownload
                     type_tag = quality,
                     time_create_stamp = Api.GetTimeSpan_2,
                     time_update_stamp = Api.GetTimeSpan_2,
-                    prefered_video_quality= video_quality,
+                    prefered_video_quality = video_quality,
                     source = new sourceModel()
                     {
                         av_id = long.Parse(item.aid),
@@ -309,7 +335,7 @@ namespace BiliAnimeDownload
                         cover = item.cover,
                         episode_id = long.Parse(item.ep_id),
                         index = item.index,
-                        orderindex=item.orderindex,
+                        orderindex = item.orderindex,
                         index_title = item.index_title,
                         page = item.page
                     }
@@ -361,7 +387,7 @@ namespace BiliAnimeDownload
                 //开始一个下载任务
                 StartDownModel startDownModel = new StartDownModel()
                 {
-                    downPath=SettingHelper.GetDownPath(),
+                    downPath = SettingHelper.GetDownPath(),
                     entry_content = entryJsonContent,
                     av_id = entryModel.ep.av_id.ToString(),
                     danmaku_id = entryModel.ep.danmaku.ToString(),
@@ -451,7 +477,7 @@ namespace BiliAnimeDownload
                         part = item.part,
                         vid = item.vid,
                         tid = data.tid,
-                        page =item.page
+                        page = item.page
                     }
                 };
                 //调用系统下载时将任务设置未完成
@@ -466,7 +492,7 @@ namespace BiliAnimeDownload
                 //当调用系统下载时才读取地址
                 if (_downlaodType == DownlaodType.System)
                 {
-                    segment_list = await Util.GetVideoUrl(item.cid.ToString(), "https://www.bilibili.com/video/av16111678", q,"",0);
+                    segment_list = await Util.GetVideoUrl(item.cid.ToString(), "https://www.bilibili.com/video/av16111678", q, "", 0);
                     long _tbyte = 0;
                     long _timelength = 0;
                     foreach (var item1 in segment_list)
@@ -508,9 +534,9 @@ namespace BiliAnimeDownload
                     index_content = indexJsonContent,
                     quality = quality,
                     season_id = "",
-                    title = item.page+" "+item.part,
+                    title = item.page + " " + item.part,
                     urls = segment_list,
-                    page=item.page,
+                    page = item.page,
                     clientType = (ClientType)SettingHelper.GetClientMode(),
                     downlaodType = _downlaodType,
                     videoType = _videoType
@@ -543,17 +569,17 @@ namespace BiliAnimeDownload
         {
             this.Navigation.PushAsync(new HelpPage());
         }
-        
-        private  void menu_histroy_Clicked(object sender, EventArgs e)
+
+        private void menu_histroy_Clicked(object sender, EventArgs e)
         {
-           
-             this.Navigation.PushAsync(new HistroyPage());
-            
+
+            this.Navigation.PushAsync(new HistroyPage());
+
         }
 
-        private  void menu_download_Clicked(object sender, EventArgs e)
+        private void menu_download_Clicked(object sender, EventArgs e)
         {
-             this.Navigation.PushAsync(new DownloadPage());
+            this.Navigation.PushAsync(new DownloadPage());
         }
     }
 

@@ -1,12 +1,13 @@
 ﻿using BiliAnime.Helpers;
 using BiliAnimeDownload.Models;
 using BiliAnimeDownload.Views;
-using Flurl.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ namespace BiliAnimeDownload.Helpers
             try
             {
 
-                var str = await("http://pic.iliili.cn/bilianime.json?ts=" + Api.GetTimeSpan_2).GetStringAsync();
+                var str = await  HttpHelper.GetStringAsync("http://pic.iliili.cn/bilianime.json?ts=" + Api.GetTimeSpan_2);
                 CheckUpdateModel model = JsonConvert.DeserializeObject<CheckUpdateModel>(str);
 
                 if (model.versionCode != Util.GetVersioncode())
@@ -58,21 +59,18 @@ namespace BiliAnimeDownload.Helpers
             try
             {
                 List<segment_listModel> segment_list = new List<segment_listModel>();
-                Flurl.Http.FlurlClient flurlClient = new FlurlClient(Api._playurlApi(cid, quality));
 
                 var headers = new Dictionary<string, string>();
 
                 headers.Add("Referer", referer);
 
                 headers.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36");
-                flurlClient.WithHeaders(headers);
-                var playUrlStr = await flurlClient.GetStringAsync();
+                var playUrlStr = await HttpHelper.GetStringAsync(Api._playurlApi(cid, quality), headers);
 
                 if (playUrlStr.Contains("<code>"))
                 {
-                    flurlClient.Url = Api._playurlApi2(cid, quality);
 
-                    var re = await flurlClient.GetStringAsync();
+                    var re = await HttpHelper.GetStringAsync(Api._playurlApi2(cid, quality),headers);
 
                     FlvPlyaerUrlModel m = JsonConvert.DeserializeObject<FlvPlyaerUrlModel>(re);
                     // 港澳台的视频会返回一个版权受限的15秒视频，8986943.mp4，出现这个算失败，继续读取
@@ -91,16 +89,12 @@ namespace BiliAnimeDownload.Helpers
                     else
                     {
                         //换个API继续读取下载地址
-                        flurlClient.Url = Api._playurlApi4(banId, cid,"");
-
                         var moeheaders = new Dictionary<string, string>();
                         moeheaders.Add("client", "bili-anime-downloader");
                         moeheaders.Add("ts", Convert.ToInt64((DateTime.Now - new DateTime(1970, 1, 1, 8, 0, 0, 0)).TotalSeconds).ToString());
                         moeheaders.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36");
                         moeheaders.Add("version", Util.GetVersion());
-                      
-                        flurlClient.WithHeaders(moeheaders);
-                        var re2 = await flurlClient.GetStringAsync();
+                        var re2 = await HttpHelper.GetStringAsync(Api._playurlApi4(banId, cid, ""), moeheaders);
                         JObject obj = JObject.Parse(re2);
                         if (Convert.ToInt32(obj["code"].ToString()) == 0)
                         {
@@ -162,22 +156,26 @@ namespace BiliAnimeDownload.Helpers
                 {
                     url = "https://www.bilibili.com/bangumi/play/ep"+ url;
                 }
-
-                Flurl.Http.FlurlClient flurlClient = new FlurlClient(url);
-                var re = await flurlClient.GetStringAsync();
-                var data= Regex.Match(re, @"ss(\d+)").Groups[1].Value;
-                if (data!="")
+                using (HttpClient client = new HttpClient())
                 {
-                    return data;
+                    var resultsBytes = await client.GetStreamAsync(url);
+                    Stream stm = new System.IO.Compression.GZipStream(resultsBytes, System.IO.Compression.CompressionMode.Decompress);
+                    StreamReader streamReader = new StreamReader(stm,Encoding.UTF8);
+                    var results = streamReader.ReadToEnd();
+                    var data = Regex.Match(results, @"ss(\d+)").Groups[1].Value;
+                    if (data != "")
+                    {
+                        return data;
+                    }
+                    else
+                    {
+                        return "";
+                    }
                 }
-                else
-                {
-                    return "";
-                }
+               
             }
             catch (Exception ex)
             {
-                throw;
                 return "";
             }
         }
@@ -233,7 +231,7 @@ namespace BiliAnimeDownload.Helpers
             var existitem = ls.Find(x => x.id == histroy.id);
             if (existitem != null)
             {
-                existitem.date = DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss");
+                existitem.date = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             }
             else
             {
@@ -242,6 +240,12 @@ namespace BiliAnimeDownload.Helpers
            
             SavaSetting("histroy", JsonConvert.SerializeObject(ls));
         }
+
+        public static void ClearHistroy()
+        {
+            SavaSetting("histroy", "");
+        }
+
         public static List<HistroyModel> GetHistroy()
         {
             List<HistroyModel> histroys = new List<HistroyModel>();

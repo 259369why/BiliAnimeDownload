@@ -19,7 +19,7 @@ namespace BiliAnimeDownload
     public interface IUtils
     {
         void OpenUri(string url);
-       
+        bool CheckPermission();
     }
 
     public interface IDownloadHelper

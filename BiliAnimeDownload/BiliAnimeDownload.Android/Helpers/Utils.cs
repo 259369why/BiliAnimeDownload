@@ -12,6 +12,8 @@ using Android.Widget;
 using Xamarin.Forms;
 using BiliAnimeDownload.Droid;
 using Android.Content.PM;
+using Android.Support.V4.Content;
+using Android;
 
 [assembly: Dependency(typeof(Utils))]
 namespace BiliAnimeDownload.Droid
@@ -38,6 +40,21 @@ namespace BiliAnimeDownload.Droid
            
         }
 
-
+        public bool CheckPermission()
+        {
+            if (ContextCompat.CheckSelfPermission(Android.App.Application.Context, Manifest.Permission.WriteExternalStorage) == (int)Permission.Granted)
+            {
+                Toast.MakeText(Android.App.Application.Context, "已经授权", ToastLength.Long).Show();
+                return true;
+                // We have permission, go ahead and use the camera.
+            }
+            else
+            {
+               
+                Toast.MakeText(Android.App.Application.Context, "没有授权", ToastLength.Long).Show();
+                return false;
+                // Camera permission is not granted. If necessary display rationale & request.
+            }
+        }
     }
 }
