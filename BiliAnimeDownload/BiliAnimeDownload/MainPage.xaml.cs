@@ -103,6 +103,7 @@ namespace BiliAnimeDownload
                 Util.ShowLongToast("请输入番剧地址");
                 return;
             }
+          
             if (txt_Sid.Text.Contains("av"))
             {
                 _aid = Regex.Match(txt_Sid.Text, @"av(\d{1,9})", RegexOptions.Singleline | RegexOptions.IgnoreCase).Groups[1].Value;
@@ -120,7 +121,7 @@ namespace BiliAnimeDownload
                 }
                 else
                 {
-                    _sid = Regex.Match(txt_Sid.Text, @"(\d{1,9})", RegexOptions.Singleline | RegexOptions.IgnoreCase).Groups[1].Value;
+                    _sid = Regex.Match(txt_Sid.Text.Replace("b23.tv", ""), @"(\d{1,9})", RegexOptions.Singleline | RegexOptions.IgnoreCase).Groups[1].Value;
                 }
 
                 _videoType = VideoType.Anime;
